@@ -423,6 +423,7 @@ button:disabled {
 .filter-grid select,
 .text-area-field textarea,
 .range-field input,
+.settings-grid input:not([type="checkbox"]),
 .settings-grid select,
 .source-select-field select {
   width: 100%;
@@ -898,6 +899,32 @@ button:disabled {
   scroll-margin-top: 24px;
 }
 
+.dw-login-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid #c8d8ea;
+  border-radius: 8px;
+  background: #eef6ff;
+}
+
+.dw-login-note div {
+  display: grid;
+  gap: 4px;
+}
+
+.dw-login-note strong {
+  color: var(--ink);
+}
+
+.dw-login-note span {
+  color: var(--muted);
+  font-size: 14px;
+}
+
 .dw-learning-frame {
   display: block;
   width: 100%;
@@ -984,6 +1011,42 @@ button:disabled {
   display: flex;
   align-items: end;
   gap: 10px;
+}
+
+.status-tile {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfdff;
+}
+
+.status-tile span,
+.status-tile small {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.status-tile strong {
+  color: var(--ink);
+  font-size: 22px;
+}
+
+.toggle-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.toggle-field input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--blue);
 }
 
 .center-screen {

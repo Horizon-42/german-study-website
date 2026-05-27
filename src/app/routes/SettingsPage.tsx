@@ -1,13 +1,42 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CheckCircle2, Download } from "lucide-react";
 import { exportStudyData, saveSettings } from "../../data/db";
 import { serializeEntriesCsv } from "../../data/importers";
+import {
+  readAutoBackupPreferences,
+  runManualJsonBackup,
+  writeAutoBackupPreferences,
+  type AutoBackupPreferences,
+  type AutoBackupRecord,
+  type StoragePersistenceStatus,
+} from "../../data/local-backup";
 import type { Settings, StudyState } from "../../types/vocab";
 import { downloadFile } from "../shared";
 
-export function SettingsPage({ state, refresh }: { state: StudyState; refresh: () => Promise<void> }) {
+export function SettingsPage({
+  state,
+  refresh,
+  storagePersistenceStatus,
+  requestStoragePersistence,
+  autoBackupRecord,
+  onAutoBackupRecordChange,
+}: {
+  state: StudyState;
+  refresh: () => Promise<void>;
+  storagePersistenceStatus?: StoragePersistenceStatus;
+  requestStoragePersistence: () => Promise<StoragePersistenceStatus>;
+  autoBackupRecord: AutoBackupRecord;
+  onAutoBackupRecordChange: (record: AutoBackupRecord) => void;
+}) {
   const [settings, setSettings] = useState<Settings>(state.settings);
   const [saved, setSaved] = useState(false);
+  const [backupPreferences, setBackupPreferences] = useState<AutoBackupPreferences>(() => readAutoBackupPreferences());
+  const [backupMessage, setBackupMessage] = useState("");
+  const [requestingStorage, setRequestingStorage] = useState(false);
+
+  useEffect(() => {
+    setSettings(state.settings);
+  }, [state.settings]);
 
   async function persistSettings() {
     await saveSettings(settings);
@@ -18,6 +47,26 @@ export function SettingsPage({ state, refresh }: { state: StudyState; refresh: (
   async function exportJson() {
     const payload = await exportStudyData();
     downloadFile("german-study-export.json", JSON.stringify(payload, null, 2), "application/json");
+  }
+
+  async function backupJsonNow() {
+    const outcome = await runManualJsonBackup({
+      getPayload: exportStudyData,
+      download: downloadFile,
+    });
+    onAutoBackupRecordChange(outcome.record);
+    setBackupMessage(outcome.status === "downloaded" ? `Saved ${outcome.filename}.` : outcome.status === "failed" ? outcome.error : "Backup skipped.");
+  }
+
+  async function requestPersistentStorageAgain() {
+    setRequestingStorage(true);
+    await requestStoragePersistence();
+    setRequestingStorage(false);
+  }
+
+  function updateBackupPreferences(next: Partial<AutoBackupPreferences>) {
+    const savedPreferences = writeAutoBackupPreferences({ ...backupPreferences, ...next });
+    setBackupPreferences(savedPreferences);
   }
 
   function exportCsv() {
@@ -70,6 +119,48 @@ export function SettingsPage({ state, refresh }: { state: StudyState; refresh: (
           </button>
         </div>
         {saved && <p className="success-text">Settings saved.</p>}
+      </section>
+
+      <section className="panel settings-grid">
+        <div className="status-tile">
+          <span>Persistent storage</span>
+          <strong>{storagePersistenceStatus?.label ?? "Checking"}</strong>
+          <small>{storagePersistenceStatus?.checkedAt ? new Date(storagePersistenceStatus.checkedAt).toLocaleString() : "Browser storage"}</small>
+        </div>
+        <div className="status-tile">
+          <span>Last JSON backup</span>
+          <strong>{autoBackupRecord.lastBackupAt ? new Date(autoBackupRecord.lastBackupAt).toLocaleString() : "Not yet"}</strong>
+          <small>{autoBackupRecord.lastBackupFilename ?? autoBackupRecord.lastOutcome ?? "Automatic backup"}</small>
+        </div>
+        <label className="toggle-field">
+          <input
+            type="checkbox"
+            checked={backupPreferences.enabled}
+            onChange={(event) => updateBackupPreferences({ enabled: event.target.checked })}
+          />
+          <span>Automatic JSON backup</span>
+        </label>
+        <label className="range-field">
+          <span>Backup interval hours</span>
+          <input
+            type="number"
+            min={1}
+            max={168}
+            value={backupPreferences.intervalHours}
+            onChange={(event) => updateBackupPreferences({ intervalHours: Number(event.target.value) })}
+          />
+        </label>
+        <div className="settings-actions">
+          <button className="secondary-action" disabled={requestingStorage} onClick={() => void requestPersistentStorageAgain()}>
+            <CheckCircle2 size={18} />
+            {requestingStorage ? "Checking..." : "Persist"}
+          </button>
+          <button className="primary-action" onClick={() => void backupJsonNow()}>
+            <Download size={18} />
+            Backup JSON now
+          </button>
+        </div>
+        {backupMessage && <p className={backupMessage.startsWith("Saved") ? "success-text" : "error-text"}>{backupMessage}</p>}
       </section>
     </section>
   );

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { BookOpen, CheckCircle2, ExternalLink, Plus, Search } from "lucide-react";
+import { BookOpen, CheckCircle2, ExternalLink, LogIn, Plus, Search } from "lucide-react";
 import { addVocabEntry, createNotebook, setFocusNotebook } from "../../data/db";
 import {
   allDwSources,
@@ -12,6 +12,7 @@ import {
   type DWSource,
   type DWSourceKind,
 } from "../../dw/source-catalog";
+import { dwProxyUrl } from "../../dw/proxy-url";
 import type { Level, StudyState } from "../../types/vocab";
 import { levelOptions } from "../../vocabulary/schema";
 import { notebookFocusName } from "../shared";
@@ -26,6 +27,7 @@ export function DWSourceBrowser({ state, refresh }: { state: StudyState; refresh
   const sourceTopics = useMemo(() => dwSourceTopics(), []);
   const filteredSources = filterDwSources({ query, kind, level });
   const sourceDraft = useMemo(() => sourceToVocabularyDraft(selectedSource), [selectedSource]);
+  const proxiedSourceUrl = useMemo(() => dwProxyUrl(selectedSource.url), [selectedSource.url]);
   const focusName = notebookFocusName(state);
 
   function chooseSource(source: DWSource, scrollToViewer = true) {
@@ -57,6 +59,10 @@ export function DWSourceBrowser({ state, refresh }: { state: StudyState; refresh
           <a className="secondary-action" href={selectedSource.url} target="_blank" rel="noreferrer">
             <ExternalLink size={18} />
             Original
+          </a>
+          <a className="secondary-action" href={proxiedSourceUrl} target="dw-proxy-frame">
+            <LogIn size={18} />
+            Proxy login
           </a>
           <a className="primary-action" href="#dw-add-word">
             <Plus size={18} />
@@ -100,10 +106,21 @@ export function DWSourceBrowser({ state, refresh }: { state: StudyState; refresh
           </div>
           <span className="source-selected-pill">{selectedSource.kind}{selectedSource.level ? ` · ${selectedSource.level}` : ""}</span>
         </div>
+        <div className="dw-login-note">
+          <div>
+            <strong>Experimental proxy mode is active for this DW frame.</strong>
+            <span>DW is loaded through this site so login cookies can stay in the same first-party context. Use only for your own study session.</span>
+          </div>
+          <a className="secondary-action" href={proxiedSourceUrl} target="dw-proxy-frame">
+            <LogIn size={18} />
+            Proxy login
+          </a>
+        </div>
         <iframe
           key={selectedSource.id}
+          name="dw-proxy-frame"
           className="dw-learning-frame"
-          src={selectedSource.url}
+          src={proxiedSourceUrl}
           title={`DW source: ${selectedSource.title}`}
         />
       </section>

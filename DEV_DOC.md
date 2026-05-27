@@ -206,10 +206,11 @@ The scheduler should be isolated in a pure module with tests so it can be replac
 
 Recommended routes:
 
-- `/` - study dashboard.
+- `/` - DW source browser and source-prefilled word add panel.
+- `/dashboard` - study dashboard.
 - `/review` - active review session.
 - `/articles` - article practice session.
-- `/dw` - DW source browser and source-prefilled word add panel.
+- `/dw` - DW source browser alias.
 - `/words` - vocabulary library.
 - `/words/new` - add word form.
 - `/notebooks` - create, edit, delete, and select vocabulary notebooks.
@@ -245,6 +246,7 @@ MVP persistence should be local-first.
 Recommended storage:
 
 - IndexedDB for structured data.
+- Request persistent browser storage with `navigator.storage.persist()` when available.
 - A small wrapper such as Dexie if using a frontend stack that supports it cleanly.
 
 Data should survive reloads and offline use. Export/import is required so the learner can back up progress.
@@ -253,6 +255,8 @@ MVP decision:
 
 - Remain fully local for now.
 - Do not add accounts or cloud sync.
+- Automatically create JSON backup downloads when study data changes and the backup interval has elapsed.
+- Keep a manual JSON backup action in Settings.
 
 ## 9. Import Format
 
@@ -301,6 +305,8 @@ This keeps the MVP easy to run, test, and extend without introducing a backend t
   CONTEXT.md
   package.json
   index.html
+  functions/
+    dw-proxy.js
   src/
     app/
       App.tsx
@@ -429,6 +435,8 @@ The first implementation is successful when:
 - Add links back to DW lesson pages.
 - Add manual add workflow for DW-derived vocabulary.
 - Add source filter and source progress.
+- Load DW pages through `/dw-proxy` when the learner wants embedded login. The proxy is experimental, restricted to DW-owned hosts, and strips frame/CSP headers while rewriting links, redirects, cookies, and common asset URLs.
+- Keep a direct original DW link because the proxy can break if DW changes login, CSP, cookie, or JavaScript behavior.
 
 ### Phase 3: Rich Study Modes
 
@@ -483,3 +491,10 @@ npx wrangler login
 ```
 
 The deploy script runs `npm run build` first, verifies Cloudflare authentication, then deploys `dist` to the selected Pages project.
+
+Pages Functions:
+
+- `/functions/dw-proxy.js` is deployed with the Pages project when the root `functions/` directory is present.
+- `/dw-proxy?url=<encoded DW URL>` proxies only DW-owned hosts such as `*.dw.com` and `*.dwcdn.net`.
+- Proxy responses are `no-store`; do not log cookies, request bodies, or authorization headers when debugging this path.
+- Local Vite development also includes a lightweight `/dw-proxy` middleware for testing the app flow before deploying.
