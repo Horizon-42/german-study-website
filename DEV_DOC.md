@@ -40,6 +40,8 @@ Sources checked:
 The MVP is a browser-based vocabulary trainer with:
 
 - A word library grouped by CEFR level, topic, lesson/source, and status.
+- Multiple notebooks for organizing vocabulary by course, source, or personal study goal.
+- A persistent study focus that limits review and article practice to a selected notebook.
 - Flashcard review for German to English only in the MVP.
 - Mandatory article practice for nouns.
 - Active recall grading after each answer.
@@ -49,6 +51,7 @@ The MVP is a browser-based vocabulary trainer with:
 - Progress dashboard.
 - Local persistence.
 - Import/export of vocabulary as JSON or CSV.
+- Import/export of notebook membership so a learner can move multiple notebooks between browsers.
 
 ### Out Of Scope For MVP
 
@@ -127,6 +130,28 @@ type Card = {
 
 Review events are stored separately for analytics and debugging.
 
+Notebook membership is stored separately from vocabulary entries so the same word can appear in multiple notebooks without duplicating its cards or review history.
+
+```ts
+type Notebook = {
+  id: string;
+  name: string;
+  description?: string;
+  color?: string;
+  sourceName?: string;
+  sourceUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type NotebookEntry = {
+  id: string;
+  notebookId: string;
+  vocabEntryId: string;
+  addedAt: string;
+};
+```
+
 ```ts
 type ReviewLog = {
   id: string;
@@ -187,6 +212,7 @@ Recommended routes:
 - `/dw` - DW source browser and source-prefilled word add panel.
 - `/words` - vocabulary library.
 - `/words/new` - add word form.
+- `/notebooks` - create, edit, delete, and select vocabulary notebooks.
 - `/import` - CSV/JSON import.
 - `/settings` - review settings and data export.
 
@@ -233,13 +259,13 @@ MVP decision:
 CSV columns:
 
 ```csv
-german,english,partOfSpeech,article,plural,exampleGerman,exampleEnglish,level,topic,sourceName,sourceUrl,notes
+notebook,german,english,partOfSpeech,article,plural,exampleGerman,exampleEnglish,level,topic,sourceName,sourceUrl,notes
 ```
 
 Example:
 
 ```csv
-Haus,house,noun,das,Häuser,Das Haus ist groß.,The house is big.,A1,Home,Manual seed,,Common beginner noun
+Home,Haus,house,noun,das,Häuser,Das Haus ist groß.,The house is big.,A1,Home,Manual seed,,Common beginner noun
 ```
 
 Import behavior:
@@ -248,6 +274,8 @@ Import behavior:
 - Require `article` for rows where `partOfSpeech` is `noun`.
 - Normalize whitespace.
 - Detect duplicates by lowercase German plus English pair.
+- Link duplicate rows into the target notebook instead of creating duplicate vocabulary entries.
+- Use the `notebook` column to create/import multiple notebooks in one file.
 - Show a preview before committing.
 - Preserve `sourceUrl` for attribution.
 
@@ -270,25 +298,59 @@ This keeps the MVP easy to run, test, and extend without introducing a backend t
 ```txt
 /
   DEV_DOC.md
+  CONTEXT.md
   package.json
   index.html
   src/
     app/
       App.tsx
-      routes.tsx
-    components/
+      WordForm.tsx
+      route-types.ts
+      shared.tsx
+      workspaces.ts
+      routes/
+        Dashboard.tsx
+        ReviewSession.tsx
+        WordsPage.tsx
+        NewWordPage.tsx
+        NotebooksPage.tsx
+        DWSourceBrowser.tsx
+        ImportPage.tsx
+        SettingsPage.tsx
     data/
       db.ts
+      indexeddb-adapter.ts
       seed-vocab.ts
       importers.ts
+    dw/
+      source-acquisition.ts
+      source-catalog.ts
     scheduler/
       fsrs.ts
       fsrs.test.ts
+    study/
+      local-study.ts
+      notebook-focus.ts
+      practice-policy.ts
+      session-planner.ts
+      study-persistence.ts
     styles/
       global.css
     types/
       vocab.ts
+    vocabulary/
+      authoring.ts
+      notebooks.ts
+      schema.ts
 ```
+
+Architecture notes:
+
+- `Practice policy` owns card generation and prompt rendering for word recall and article practice.
+- `Vocabulary authoring schema` owns draft defaults, shared option lists, import headers, and validation rules.
+- `Study persistence` is the seam between local study commands and concrete storage adapters.
+- `DW source acquisition` owns curated DW source metadata, search/filtering, and source-to-draft mapping.
+- Route workspaces are split by learner workflow so dashboard, review, words, notebooks, DW, import, and settings can evolve without one large UI module.
 
 ## 12. Seed Vocabulary Plan
 
@@ -390,3 +452,34 @@ The first implementation is successful when:
 - Article practice includes article case forms.
 - The site remains fully local for now.
 - DW imports should accept standard CSV or JSON; no special DW source format is required yet.
+
+## 17. Cloudflare Pages Deployment
+
+The app is a static Vite site. Local deployment uses Cloudflare Pages Direct Upload through Wrangler.
+
+Deploy command:
+
+```bash
+npm run deploy:cloudflare
+```
+
+Override project and branch:
+
+```bash
+npm run deploy:cloudflare -- german-study-website main
+```
+
+Configuration options:
+
+- `CLOUDFLARE_PROJECT_NAME`: Cloudflare Pages project name. Defaults to `package.json` name.
+- `CLOUDFLARE_BRANCH`: deployment branch. Defaults to the current git branch, then `main`.
+- `CLOUDFLARE_OUTPUT_DIR`: build output directory. Defaults to `dist`.
+- `CLOUDFLARE_API_TOKEN`: optional token for non-interactive deploys.
+
+First-time setup:
+
+```bash
+npx wrangler login
+```
+
+The deploy script runs `npm run build` first, verifies Cloudflare authentication, then deploys `dist` to the selected Pages project.

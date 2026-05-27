@@ -7,7 +7,7 @@ import type {
 } from "../study/storage-adapter";
 
 const DB_NAME = "german-study-mvp";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 export function createIndexedDbStudyStorageAdapter(): StudyStorageAdapter {
   let dbPromise: Promise<IDBDatabase> | undefined;
@@ -37,6 +37,17 @@ export function createIndexedDbStudyStorageAdapter(): StudyStorageAdapter {
           const store = db.createObjectStore("reviewLogs", { keyPath: "id" });
           store.createIndex("cardId", "cardId", { unique: false });
           store.createIndex("reviewedAt", "reviewedAt", { unique: false });
+        }
+
+        if (!db.objectStoreNames.contains("notebooks")) {
+          const store = db.createObjectStore("notebooks", { keyPath: "id" });
+          store.createIndex("name", "name", { unique: false });
+        }
+
+        if (!db.objectStoreNames.contains("notebookEntries")) {
+          const store = db.createObjectStore("notebookEntries", { keyPath: "id" });
+          store.createIndex("notebookId", "notebookId", { unique: false });
+          store.createIndex("vocabEntryId", "vocabEntryId", { unique: false });
         }
 
         if (!db.objectStoreNames.contains("settings")) {

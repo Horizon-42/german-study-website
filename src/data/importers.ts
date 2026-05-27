@@ -3,11 +3,15 @@ import {
   validateVocabularyDraft,
   vocabularyIdentity,
 } from "../vocabulary/authoring";
-import type { VocabDraft, VocabEntry } from "../types/vocab";
+import { normalizeNotebookName } from "../vocabulary/notebooks";
+import { vocabularyCsvHeaders } from "../vocabulary/schema";
+import type { Notebook, NotebookEntry, VocabDraft, VocabEntry } from "../types/vocab";
 
 export type ImportRow = {
   rowNumber: number;
   draft: VocabDraft;
+  notebookName?: string;
+  existingEntryId?: string;
   duplicate: boolean;
 };
 
@@ -20,23 +24,6 @@ export type ImportPreview = {
   rows: ImportRow[];
   errors: ImportError[];
 };
-
-const headers = [
-  "german",
-  "english",
-  "partOfSpeech",
-  "article",
-  "plural",
-  "exampleGerman",
-  "exampleEnglish",
-  "level",
-  "topic",
-  "sourceName",
-  "sourceUrl",
-  "notes",
-] as const;
-
-type Header = (typeof headers)[number];
 
 export function parseVocabularyInput(text: string, existingEntries: VocabEntry[] = []): ImportPreview {
   const trimmed = text.trim();
@@ -52,7 +39,8 @@ export function parseVocabularyInput(text: string, existingEntries: VocabEntry[]
     return { rows: [], errors: rawRows.errors };
   }
 
-  const seen = new Set(existingEntries.map(vocabularyIdentity));
+  const existingByIdentity = new Map(existingEntries.map((entry) => [vocabularyIdentity(entry), entry]));
+  const seen = new Set(existingByIdentity.keys());
   const rows: ImportRow[] = [];
   const errors: ImportError[] = [];
 
@@ -66,22 +54,42 @@ export function parseVocabularyInput(text: string, existingEntries: VocabEntry[]
     }
 
     const key = vocabularyIdentity(draft);
+    const existingEntry = existingByIdentity.get(key);
     const duplicate = seen.has(key);
     seen.add(key);
-    rows.push({ rowNumber, draft, duplicate });
+    rows.push({
+      rowNumber,
+      draft,
+      notebookName: normalizeNotebookName(values.notebookName ?? values.notebook),
+      existingEntryId: existingEntry?.id,
+      duplicate,
+    });
   });
 
   return { rows, errors };
 }
 
-export function serializeEntriesCsv(entries: VocabEntry[]): string {
-  const body = entries.map((entry) =>
-    headers
-      .map((header) => csvEscape(String(entry[header] ?? "")))
+export function serializeEntriesCsv(
+  entries: VocabEntry[],
+  notebooks: Notebook[] = [],
+  notebookEntries: NotebookEntry[] = [],
+): string {
+  const notebookById = new Map(notebooks.map((notebook) => [notebook.id, notebook]));
+  const membershipsByEntryId = new Map<string, NotebookEntry[]>();
+  notebookEntries.forEach((link) => {
+    membershipsByEntryId.set(link.vocabEntryId, [...membershipsByEntryId.get(link.vocabEntryId) ?? [], link]);
+  });
+  const rows = entries.flatMap((entry) => {
+    const memberships = membershipsByEntryId.get(entry.id) ?? [undefined];
+    return memberships.map((membership) => ({ entry, notebook: membership ? notebookById.get(membership.notebookId) : undefined }));
+  });
+  const body = rows.map(({ entry, notebook }) =>
+    vocabularyCsvHeaders
+      .map((header) => csvEscape(header === "notebook" ? notebook?.name ?? "" : String(entry[header] ?? "")))
       .join(","),
   );
 
-  return [headers.join(","), ...body].join("\n");
+  return [vocabularyCsvHeaders.join(","), ...body].join("\n");
 }
 
 function parseJsonRows(text: string):
@@ -101,6 +109,10 @@ function parseJsonRows(text: string):
       };
     }
 
+    if (isRecord(parsed) && Array.isArray(parsed.entries) && Array.isArray(parsed.notebooks)) {
+      return { rows: rowsFromExportPayload(parsed) };
+    }
+
     return {
       rows: source
         .filter(isRecord)
@@ -109,6 +121,30 @@ function parseJsonRows(text: string):
   } catch {
     return { errors: [{ rowNumber: 1, message: "Invalid JSON." }] };
   }
+}
+
+function rowsFromExportPayload(payload: Record<string, unknown>): Array<{ rowNumber: number; values: Record<string, unknown> }> {
+  const notebooks = Array.isArray(payload.notebooks) ? payload.notebooks.filter(isRecord) : [];
+  const notebookEntries = Array.isArray(payload.notebookEntries) ? payload.notebookEntries.filter(isRecord) : [];
+  const entries = Array.isArray(payload.entries) ? payload.entries.filter(isRecord) : [];
+  const notebookNameById = new Map(notebooks.map((notebook) => [String(notebook.id), notebook.name]));
+  const membershipsByEntryId = new Map<string, Record<string, unknown>[]>();
+
+  notebookEntries.forEach((link) => {
+    const vocabEntryId = String(link.vocabEntryId ?? "");
+    membershipsByEntryId.set(vocabEntryId, [...membershipsByEntryId.get(vocabEntryId) ?? [], link]);
+  });
+
+  return entries.flatMap((entry, index) => {
+    const memberships = membershipsByEntryId.get(String(entry.id ?? "")) ?? [undefined];
+    return memberships.map((membership) => ({
+      rowNumber: index + 1,
+      values: {
+        ...entry,
+        notebook: membership ? notebookNameById.get(String(membership.notebookId)) ?? "" : "",
+      },
+    }));
+  });
 }
 
 function parseCsvRows(text: string):

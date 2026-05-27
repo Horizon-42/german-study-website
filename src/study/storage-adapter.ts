@@ -1,9 +1,11 @@
-import type { Card, ReviewLog, Settings, VocabEntry } from "../types/vocab";
+import type { Card, Notebook, NotebookEntry, ReviewLog, Settings, VocabEntry } from "../types/vocab";
 
 export type StudyStoreValueMap = {
   entries: VocabEntry;
   cards: Card;
   reviewLogs: ReviewLog;
+  notebooks: Notebook;
+  notebookEntries: NotebookEntry;
   settings: Settings;
 };
 

@@ -16,7 +16,7 @@ const existing: VocabEntry[] = [
 describe("vocabulary importers", () => {
   it("parses valid CSV rows", () => {
     const preview = parseVocabularyInput(
-      "german,english,article,level\nMutter,mother,die,A1\ngehen,to go,,A1",
+      "notebook,german,english,article,level\nFamily,Mutter,mother,die,A1\nVerbs,gehen,to go,,A1",
       existing,
     );
 
@@ -24,6 +24,7 @@ describe("vocabulary importers", () => {
     expect(preview.rows).toHaveLength(2);
     expect(preview.rows[0].draft.article).toBe("die");
     expect(preview.rows[0].draft.level).toBe("A1");
+    expect(preview.rows[0].notebookName).toBe("Family");
   });
 
   it("marks duplicates from existing entries", () => {
@@ -64,6 +65,33 @@ describe("vocabulary importers", () => {
     expect(preview.rows[0].draft.german).toBe("Haus");
   });
 
+  it("preserves notebook membership when parsing exported JSON payloads", () => {
+    const preview = parseVocabularyInput(JSON.stringify({
+      entries: existing,
+      notebooks: [
+        {
+          id: "notebook-home",
+          name: "Home",
+          createdAt: "2026-05-22T00:00:00.000Z",
+          updatedAt: "2026-05-22T00:00:00.000Z",
+        },
+      ],
+      notebookEntries: [
+        {
+          id: "notebook-home::1",
+          notebookId: "notebook-home",
+          vocabEntryId: "1",
+          addedAt: "2026-05-22T00:00:00.000Z",
+        },
+      ],
+    }), []);
+
+    expect(preview.rows[0]).toMatchObject({
+      notebookName: "Home",
+      draft: { german: "Haus" },
+    });
+  });
+
   it("serializes CSV with escaping", () => {
     const csv = serializeEntriesCsv([
       {
@@ -72,6 +100,7 @@ describe("vocabulary importers", () => {
       },
     ]);
 
+    expect(csv).toContain("notebook,german,english");
     expect(csv).toContain("\"common, useful\"");
   });
 });

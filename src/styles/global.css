@@ -423,6 +423,7 @@ button:disabled {
 .filter-grid select,
 .text-area-field textarea,
 .range-field input,
+.settings-grid select,
 .source-select-field select {
   width: 100%;
   min-height: 42px;
@@ -431,6 +432,26 @@ button:disabled {
   background: #ffffff;
   color: var(--ink);
   padding: 9px 11px;
+}
+
+.compact-select {
+  display: grid;
+  gap: 6px;
+  min-width: 190px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.compact-select select {
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  padding: 7px 10px;
+  text-transform: none;
 }
 
 .answer-field input {

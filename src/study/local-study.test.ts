@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { createInMemoryStudyStorageAdapter } from "./in-memory-storage-adapter";
 import { createLocalStudyCommands } from "./local-study";
-import type { Card, ReviewLog, VocabDraft, VocabEntry } from "../types/vocab";
+import { createStudyPersistence } from "./study-persistence";
+import { defaultNotebookId } from "../vocabulary/notebooks";
+import type { Card, Notebook, NotebookEntry, ReviewLog, VocabDraft, VocabEntry } from "../types/vocab";
 
 const now = new Date("2026-05-22T08:00:00.000Z");
 
@@ -21,6 +23,8 @@ describe("local study commands", () => {
     const state = await commands.initializeStore();
 
     expect(state.settings).toMatchObject({ id: "settings", dailyNewLimit: 10 });
+    expect(state.notebooks).toMatchObject([{ id: defaultNotebookId, name: "Core Vocabulary" }]);
+    expect(state.notebookEntries).toMatchObject([{ notebookId: defaultNotebookId }]);
     expect(state.entries).toMatchObject([
       {
         german: "Haus",
@@ -49,7 +53,104 @@ describe("local study commands", () => {
 
     expect(entry).toMatchObject({ german: "gehen", english: "to go" });
     expect(state.entries).toHaveLength(1);
+    expect(state.notebookEntries).toMatchObject([{ vocabEntryId: entry.id, notebookId: defaultNotebookId }]);
     expect(state.cards).toMatchObject([{ vocabEntryId: entry.id, direction: "de_to_en" }]);
+  });
+
+  it("creates notebooks and focuses study state on one notebook", async () => {
+    const commands = createCommands();
+    await commands.initializeStore();
+    const notebook = await commands.createNotebook({ name: "Travel", color: "#059669" });
+    const entry = await commands.addVocabEntry({
+      german: "der Zug",
+      english: "train",
+      partOfSpeech: "noun",
+    }, notebook.id);
+    await commands.setFocusNotebook(notebook.id);
+
+    const state = await commands.getStudyState();
+
+    expect(state.settings.focusNotebookId).toBe(notebook.id);
+    expect(state.notebooks.map((item) => item.name)).toContain("Travel");
+    expect(state.notebookEntries).toContainEqual(expect.objectContaining({
+      notebookId: notebook.id,
+      vocabEntryId: entry.id,
+    }));
+  });
+
+  it("links manual duplicate words into the target notebook without duplicating cards", async () => {
+    const commands = createCommands({
+      initial: {
+        entries: [entry({ id: "existing", german: "Haus", english: "house" })],
+        cards: [card({ id: "existing-card", vocabEntryId: "existing" })],
+        notebooks: [notebook({ id: defaultNotebookId, name: "Core Vocabulary" })],
+        notebookEntries: [notebookEntry({ notebookId: defaultNotebookId, vocabEntryId: "existing" })],
+      },
+    });
+    const travel = await commands.createNotebook({ name: "Travel" });
+
+    const added = await commands.addVocabEntry({
+      german: " das Haus ",
+      english: "House",
+      partOfSpeech: "noun",
+      article: "das",
+    }, travel.id);
+    const state = await commands.getStudyState();
+
+    expect(added.id).toBe("existing");
+    expect(state.entries).toHaveLength(1);
+    expect(state.cards).toHaveLength(1);
+    expect(state.notebookEntries).toEqual(expect.arrayContaining([
+      expect.objectContaining({ notebookId: travel.id, vocabEntryId: "existing" }),
+    ]));
+  });
+
+  it("imports rows into multiple notebooks and links duplicate entries", async () => {
+    const commands = createCommands({
+      initial: {
+        entries: [entry({ id: "existing", german: "Haus", english: "house" })],
+        notebooks: [notebook({ id: defaultNotebookId, name: "Core Vocabulary" })],
+        notebookEntries: [notebookEntry({ notebookId: defaultNotebookId, vocabEntryId: "existing" })],
+      },
+    });
+
+    const result = await commands.importVocabEntries([
+      {
+        notebookName: "Home",
+        draft: { german: "Haus", english: "house", partOfSpeech: "noun", article: "das" },
+      },
+      {
+        notebookName: "Travel",
+        draft: { german: "Bahnhof", english: "train station", partOfSpeech: "noun", article: "der" },
+      },
+    ]);
+    const state = await commands.getStudyState();
+
+    expect(result).toEqual({ createdEntries: 1, linkedEntries: 1, createdNotebooks: 2 });
+    expect(state.entries.map((item) => item.german).sort()).toEqual(["Bahnhof", "Haus"]);
+    expect(state.notebooks.map((item) => item.name).sort()).toEqual([
+      "Core Vocabulary",
+      "Home",
+      "Travel",
+    ]);
+    expect(state.notebookEntries).toEqual(expect.arrayContaining([
+      expect.objectContaining({ notebookId: expect.any(String), vocabEntryId: "existing" }),
+    ]));
+  });
+
+  it("rejects notebook renames that collide with another notebook", async () => {
+    const commands = createCommands({
+      initial: {
+        notebooks: [
+          notebook({ id: defaultNotebookId, name: "Core Vocabulary" }),
+          notebook({ id: "travel", name: "Travel" }),
+        ],
+      },
+    });
+
+    await expect(commands.updateNotebook(notebook({ id: "travel", name: "Core Vocabulary" })))
+      .rejects
+      .toThrow("already exists");
   });
 
   it("reviews a card and writes the review log through the adapter", async () => {
@@ -206,11 +307,31 @@ function createCommands({
   seedVocabulary?: VocabDraft[];
 } = {}) {
   let nextId = 0;
-  return createLocalStudyCommands(createInMemoryStudyStorageAdapter(initial), {
+  return createLocalStudyCommands(createStudyPersistence(createInMemoryStudyStorageAdapter(initial)), {
     now: () => now,
     createId: () => `id-${nextId += 1}`,
     seedVocabulary,
   });
+}
+
+function notebook(overrides: Partial<Notebook> = {}): Notebook {
+  return {
+    id: "notebook",
+    name: "Notebook",
+    createdAt: "2026-05-20T08:00:00.000Z",
+    updatedAt: "2026-05-20T08:00:00.000Z",
+    ...overrides,
+  };
+}
+
+function notebookEntry(overrides: Partial<NotebookEntry> = {}): NotebookEntry {
+  return {
+    id: `${overrides.notebookId ?? "notebook"}::${overrides.vocabEntryId ?? "entry"}`,
+    notebookId: "notebook",
+    vocabEntryId: "entry",
+    addedAt: "2026-05-20T08:00:00.000Z",
+    ...overrides,
+  };
 }
 
 function entry(overrides: Partial<VocabEntry> = {}): VocabEntry {

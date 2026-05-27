@@ -13,6 +13,26 @@ export type CardDirection = "de_to_en" | "article" | "article_case" | "example_c
 export type CardState = "new" | "learning" | "review" | "relearning" | "suspended";
 export type Rating = "again" | "hard" | "good" | "easy";
 
+export type Notebook = {
+  id: string;
+  name: string;
+  description?: string;
+  color?: string;
+  sourceName?: string;
+  sourceUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type NotebookDraft = Omit<Notebook, "id" | "createdAt" | "updatedAt">;
+
+export type NotebookEntry = {
+  id: string;
+  notebookId: string;
+  vocabEntryId: string;
+  addedAt: string;
+};
+
 export type VocabEntry = {
   id: string;
   german: string;
@@ -63,16 +83,19 @@ export type Settings = {
   id: "settings";
   dailyNewLimit: number;
   targetRetention: number;
+  focusNotebookId?: string;
 };
 
 export type StudyState = {
   entries: VocabEntry[];
   cards: Card[];
   reviewLogs: ReviewLog[];
+  notebooks: Notebook[];
+  notebookEntries: NotebookEntry[];
   settings: Settings;
 };
 
 export type ExportPayload = StudyState & {
   exportedAt: string;
-  schemaVersion: 1;
+  schemaVersion: 2;
 };

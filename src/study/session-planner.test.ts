@@ -26,7 +26,7 @@ describe("study session planner", () => {
       ],
       settings,
       "words",
-      now,
+      { now },
     );
 
     expect(queue.map((item) => item.id)).toEqual(["word"]);
@@ -41,7 +41,7 @@ describe("study session planner", () => {
       ],
       settings,
       "articles",
-      now,
+      { now },
     );
 
     expect(queue.map((item) => item.id)).toEqual(["article", "case"]);
@@ -58,7 +58,7 @@ describe("study session planner", () => {
       ],
       settings,
       "words",
-      now,
+      { now },
     );
 
     expect(queue.map((item) => item.id)).toEqual(["early-review", "late-review", "new-1", "new-2"]);
@@ -90,9 +90,9 @@ describe("study session planner", () => {
 
   it("calculates dashboard stats from an explicit clock", () => {
     const reviewLogs: ReviewLog[] = [
-      reviewLog("2026-05-22T07:00:00.000Z"),
-      reviewLog("2026-05-21T10:00:00.000Z"),
-      reviewLog("2026-05-20T10:00:00.000Z"),
+      reviewLog({ cardId: "word", reviewedAt: "2026-05-22T07:00:00.000Z" }),
+      reviewLog({ cardId: "word", reviewedAt: "2026-05-21T10:00:00.000Z" }),
+      reviewLog({ cardId: "word", reviewedAt: "2026-05-20T10:00:00.000Z" }),
     ];
     const state: StudyState = {
       entries: [],
@@ -101,6 +101,8 @@ describe("study session planner", () => {
         card({ id: "article", direction: "article", state: "review", dueAt: "2026-05-22T07:00:00.000Z" }),
       ],
       reviewLogs,
+      notebooks: [],
+      notebookEntries: [],
       settings,
     };
 
@@ -112,6 +114,36 @@ describe("study session planner", () => {
     });
   });
 
+  it("calculates dashboard stats inside the selected notebook focus", () => {
+    const state: StudyState = {
+      entries: [],
+      cards: [
+        card({ id: "travel-card", vocabEntryId: "travel-entry", direction: "de_to_en" }),
+        card({ id: "home-card", vocabEntryId: "home-entry", direction: "de_to_en" }),
+      ],
+      reviewLogs: [
+        reviewLog({ id: "travel-log", cardId: "travel-card", reviewedAt: "2026-05-22T07:00:00.000Z" }),
+        reviewLog({ id: "home-log", cardId: "home-card", reviewedAt: "2026-05-22T07:30:00.000Z" }),
+      ],
+      notebooks: [],
+      notebookEntries: [
+        {
+          id: "travel::travel-entry",
+          notebookId: "travel",
+          vocabEntryId: "travel-entry",
+          addedAt: "2026-05-22T07:00:00.000Z",
+        },
+      ],
+      settings: { ...settings, focusNotebookId: "travel" },
+    };
+
+    expect(buildStats(state, now)).toMatchObject({
+      dueCards: 1,
+      studiedToday: 1,
+      streak: 1,
+    });
+  });
+
   it("checks due status against an explicit clock", () => {
     expect(isDue(card({ dueAt: "2026-05-22T07:59:59.000Z" }), now)).toBe(true);
     expect(isDue(card({ dueAt: "2026-05-22T08:00:01.000Z" }), now)).toBe(false);
@@ -120,6 +152,31 @@ describe("study session planner", () => {
   it("displays noun articles once", () => {
     expect(displayGerman(vocabEntry({ german: "Haus", partOfSpeech: "noun", article: "das" }))).toBe("das Haus");
     expect(displayGerman(vocabEntry({ german: "das Haus", partOfSpeech: "noun", article: "das" }))).toBe("das Haus");
+  });
+
+  it("focuses queues to the selected notebook", () => {
+    const queue = buildStudyQueue(
+      [
+        card({ id: "travel-card", vocabEntryId: "travel-entry" }),
+        card({ id: "home-card", vocabEntryId: "home-entry" }),
+      ],
+      settings,
+      "words",
+      {
+        now,
+        notebookId: "travel",
+        notebookEntries: [
+          {
+            id: "travel::travel-entry",
+            notebookId: "travel",
+            vocabEntryId: "travel-entry",
+            addedAt: "2026-05-22T07:00:00.000Z",
+          },
+        ],
+      },
+    );
+
+    expect(queue.map((item) => item.id)).toEqual(["travel-card"]);
   });
 });
 
@@ -151,13 +208,14 @@ function vocabEntry(overrides: Partial<VocabEntry> = {}): VocabEntry {
   };
 }
 
-function reviewLog(reviewedAt: string): ReviewLog {
+function reviewLog(overrides: Partial<ReviewLog> = {}): ReviewLog {
   return {
-    id: reviewedAt,
+    id: "log",
     cardId: "card",
-    reviewedAt,
+    reviewedAt: "2026-05-22T07:00:00.000Z",
     rating: "good",
     previousDueAt: "2026-05-22T07:00:00.000Z",
     nextDueAt: "2026-05-23T07:00:00.000Z",
+    ...overrides,
   };
 }

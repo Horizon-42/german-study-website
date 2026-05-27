@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "deploy:cloudflare": "bash scripts/deploy-cloudflare.sh",
     "preview": "vite preview",
     "test": "vitest run"
   },

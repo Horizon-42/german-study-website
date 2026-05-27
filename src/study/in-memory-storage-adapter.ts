@@ -1,4 +1,4 @@
-import type { Card, ReviewLog, Settings, VocabEntry } from "../types/vocab";
+import type { Card, Notebook, NotebookEntry, ReviewLog, Settings, VocabEntry } from "../types/vocab";
 import type {
   StudyDeleteGroup,
   StudyStorageAdapter,
@@ -11,6 +11,8 @@ export type InMemoryStudyData = {
   entries?: VocabEntry[];
   cards?: Card[];
   reviewLogs?: ReviewLog[];
+  notebooks?: Notebook[];
+  notebookEntries?: NotebookEntry[];
   settings?: Settings[];
 };
 
@@ -23,6 +25,8 @@ export function createInMemoryStudyStorageAdapter(initial: InMemoryStudyData = {
     entries: toMap(initial.entries ?? []),
     cards: toMap(initial.cards ?? []),
     reviewLogs: toMap(initial.reviewLogs ?? []),
+    notebooks: toMap(initial.notebooks ?? []),
+    notebookEntries: toMap(initial.notebookEntries ?? []),
     settings: toMap(initial.settings ?? []),
   };
 

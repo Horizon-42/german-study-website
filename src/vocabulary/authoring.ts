@@ -1,4 +1,5 @@
 import type { Article, Level, PartOfSpeech, VocabDraft, VocabEntry } from "../types/vocab";
+import { levelOptions, partOfSpeechOptions } from "./schema";
 
 export type VocabularyInput = Record<string, unknown>;
 
@@ -7,16 +8,7 @@ export type VocabularyValidationError = {
   message: string;
 };
 
-const partOfSpeechOptions: PartOfSpeech[] = [
-  "noun",
-  "verb",
-  "adjective",
-  "adverb",
-  "phrase",
-  "other",
-];
 const articleOptions: Article[] = ["der", "die", "das"];
-const levelOptions: Level[] = ["A1", "A2", "B1", "B2", "C1", "C2"];
 
 export function normalizeVocabularyDraft(values: VocabularyInput): VocabDraft {
   const rawGerman = clean(values.german);
