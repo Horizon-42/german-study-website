@@ -781,11 +781,17 @@ button:disabled {
   gap: 20px;
 }
 
+.dw-workspace {
+  max-width: min(1680px, 100%);
+  gap: 16px;
+}
+
 .dw-source-bar {
   display: grid;
-  grid-template-columns: minmax(220px, 0.65fr) minmax(280px, 1fr);
-  gap: 18px;
+  grid-template-columns: minmax(220px, 0.52fr) minmax(300px, 1fr);
+  gap: 16px;
   align-items: end;
+  padding: 16px 18px;
   background: #fffdf8;
 }
 
@@ -795,7 +801,7 @@ button:disabled {
 }
 
 .selected-source-summary strong {
-  font-size: 24px;
+  font-size: 22px;
   line-height: 1.1;
 }
 
@@ -891,46 +897,103 @@ button:disabled {
 }
 
 .source-add-panel {
+  position: sticky;
+  top: 24px;
+  align-self: start;
   max-width: none;
+  max-height: min(720px, calc(100vh - 48px));
+  overflow: auto;
+  padding: 16px;
   scroll-margin-top: 24px;
+  background: #fffdf8;
+}
+
+.source-add-heading {
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.source-add-heading div > span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.source-add-panel .word-form {
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.source-add-panel .wide-field,
+.source-add-panel .form-submit {
+  grid-column: auto;
+}
+
+.source-add-panel .word-form label {
+  gap: 5px;
+}
+
+.source-add-panel .word-form input,
+.source-add-panel .word-form select,
+.source-add-panel .word-form textarea {
+  min-height: 38px;
+  padding: 7px 10px;
+}
+
+.source-add-panel .word-form textarea {
+  min-height: 72px;
+}
+
+.source-add-panel .form-submit {
+  justify-self: stretch;
+  width: 100%;
+}
+
+.source-add-panel .keyboard-method-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.source-add-panel .keyboard-helper {
+  max-height: 260px;
+  overflow: auto;
+  padding: 10px;
+}
+
+.source-add-panel .keyboard-method {
+  padding: 7px;
+}
+
+.source-add-panel .keyboard-method strong {
+  font-size: 18px;
+}
+
+.source-add-panel .keyboard-method span {
+  font-size: 11px;
 }
 
 .dw-viewer-panel {
+  min-width: 0;
+  padding: 14px;
+  overflow: hidden;
   scroll-margin-top: 24px;
 }
 
-.dw-login-note {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 14px;
-  border: 1px solid #c8d8ea;
-  border-radius: 8px;
-  background: #eef6ff;
+.dw-viewer-heading {
+  margin-bottom: 12px;
 }
 
-.dw-login-note div {
+.dw-study-layout {
   display: grid;
-  gap: 4px;
-}
-
-.dw-login-note strong {
-  color: var(--ink);
-}
-
-.dw-login-note span {
-  color: var(--muted);
-  font-size: 14px;
+  grid-template-columns: minmax(0, 1fr) clamp(340px, 24vw, 420px);
+  gap: 16px;
+  align-items: start;
 }
 
 .dw-learning-frame {
   display: block;
   width: 100%;
-  height: min(780px, 76vh);
+  height: min(980px, max(640px, calc(100vh - 250px)));
   border: 1px solid #d8cdbb;
-  border-radius: 8px;
+  border-radius: 6px;
   background: #ffffff;
 }
 
@@ -1074,6 +1137,26 @@ button:disabled {
   }
 }
 
+@media (max-width: 1180px) {
+  .dw-study-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .source-add-panel {
+    position: static;
+    max-height: none;
+  }
+
+  .source-add-panel .word-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .source-add-panel .wide-field,
+  .source-add-panel .form-submit {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (max-width: 900px) {
   .app-shell {
     grid-template-columns: 1fr;
@@ -1090,6 +1173,7 @@ button:disabled {
   .dashboard-layout,
   .import-grid,
   .settings-grid,
+  .dw-study-layout,
   .dw-source-bar,
   .filter-grid {
     grid-template-columns: 1fr;

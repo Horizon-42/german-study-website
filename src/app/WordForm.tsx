@@ -27,11 +27,13 @@ export function WordForm({
   initial,
   submitLabel,
   resetOnSubmit = false,
+  variant = "full",
   onSubmit,
 }: {
   initial: VocabDraft | VocabEntry;
   submitLabel: string;
   resetOnSubmit?: boolean;
+  variant?: "full" | "capture";
   onSubmit: (draft: VocabDraft) => Promise<void>;
 }) {
   const [draft, setDraft] = useState<VocabDraft>(() => draftFromVocabulary(initial));
@@ -99,8 +101,10 @@ export function WordForm({
     writeGermanKeyboardHelperVisibility(visible);
   }
 
+  const isCaptureVariant = variant === "capture";
+
   return (
-    <form className="word-form" onSubmit={(event) => void submit(event)}>
+    <form className={`word-form ${isCaptureVariant ? "word-form-capture" : ""}`} onSubmit={(event) => void submit(event)}>
       <div className="german-input-group wide-field">
         <label>
           <span>German</span>
@@ -156,14 +160,18 @@ export function WordForm({
         <span>Topic</span>
         <input value={draft.topic ?? ""} onChange={(event) => setDraft({ ...draft, topic: event.target.value })} />
       </label>
-      <label>
-        <span>Source</span>
-        <input value={draft.sourceName ?? ""} onChange={(event) => setDraft({ ...draft, sourceName: event.target.value })} />
-      </label>
-      <label className="wide-field">
-        <span>Source URL</span>
-        <input type="url" value={draft.sourceUrl ?? ""} onChange={(event) => setDraft({ ...draft, sourceUrl: event.target.value })} />
-      </label>
+      {!isCaptureVariant && (
+        <>
+          <label>
+            <span>Source</span>
+            <input value={draft.sourceName ?? ""} onChange={(event) => setDraft({ ...draft, sourceName: event.target.value })} />
+          </label>
+          <label className="wide-field">
+            <span>Source URL</span>
+            <input type="url" value={draft.sourceUrl ?? ""} onChange={(event) => setDraft({ ...draft, sourceUrl: event.target.value })} />
+          </label>
+        </>
+      )}
       <label className="wide-field">
         <span>German example</span>
         <input

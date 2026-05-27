@@ -49,7 +49,7 @@ export function DWSourceBrowser({ state, refresh }: { state: StudyState; refresh
   }
 
   return (
-    <section className="view-grid">
+    <section className="view-grid dw-workspace">
       <header className="view-header">
         <div>
           <p className="eyebrow">DW workspace</p>
@@ -98,59 +98,52 @@ export function DWSourceBrowser({ state, refresh }: { state: StudyState; refresh
         </label>
       </section>
 
-      <section className="panel dw-viewer-panel" id="dw-viewer">
-        <div className="panel-heading">
-          <div>
-            <p className="eyebrow">Learning page</p>
-            <h2>{selectedSource.title}</h2>
+      <section className="dw-study-layout" aria-label="DW study workspace">
+        <section className="panel dw-viewer-panel" id="dw-viewer">
+          <div className="panel-heading dw-viewer-heading">
+            <div>
+              <p className="eyebrow">Learning page</p>
+              <h2>{selectedSource.title}</h2>
+            </div>
+            <span className="source-selected-pill">{selectedSource.kind}{selectedSource.level ? ` · ${selectedSource.level}` : ""}</span>
           </div>
-          <span className="source-selected-pill">{selectedSource.kind}{selectedSource.level ? ` · ${selectedSource.level}` : ""}</span>
-        </div>
-        <div className="dw-login-note">
-          <div>
-            <strong>Experimental proxy mode is active for this DW frame.</strong>
-            <span>DW is loaded through this site so login cookies can stay in the same first-party context. Use only for your own study session.</span>
-          </div>
-          <a className="secondary-action" href={proxiedSourceUrl} target="dw-proxy-frame">
-            <LogIn size={18} />
-            Proxy login
-          </a>
-        </div>
-        <iframe
-          key={selectedSource.id}
-          name="dw-proxy-frame"
-          className="dw-learning-frame"
-          src={proxiedSourceUrl}
-          title={`DW source: ${selectedSource.title}`}
-        />
-      </section>
+          <iframe
+            key={selectedSource.id}
+            name="dw-proxy-frame"
+            className="dw-learning-frame"
+            src={proxiedSourceUrl}
+            title={`DW source: ${selectedSource.title}`}
+          />
+        </section>
 
-      <section className="panel editor-panel source-add-panel" id="dw-add-word">
-        <div className="panel-heading">
-          <div>
-            <p className="eyebrow">Add word from DW</p>
-            <h2>{selectedSource.title}</h2>
-            <span>Saving to {focusName}</span>
+        <aside className="panel editor-panel source-add-panel" id="dw-add-word" aria-label="Add DW vocabulary">
+          <div className="panel-heading source-add-heading">
+            <div>
+              <p className="eyebrow">Vocabulary capture</p>
+              <h2>Quick add word</h2>
+              <span>Saving to {focusName}</span>
+            </div>
+            <span className="source-selected-pill">{selectedSource.level ?? "DW"}</span>
           </div>
-          <span className="source-selected-pill">{selectedSource.kind}{selectedSource.level ? ` · ${selectedSource.level}` : ""}</span>
-        </div>
-        <WordForm
-          key={`${selectedSource.id}-${saved}`}
-          initial={sourceDraft}
-          submitLabel="Add DW word"
-          resetOnSubmit
-          onSubmit={async (draft) => {
-            await addVocabEntry(draft, state.settings.focusNotebookId);
-            await refresh();
-            setSaved(`${draft.german} saved from ${selectedSource.title}.`);
-          }}
-        />
-        {saved && (
-          <div className="inline-success">
-            <CheckCircle2 size={18} />
-            {saved}
-          </div>
-        )}
+          <WordForm
+            key={`${selectedSource.id}-${saved}`}
+            initial={sourceDraft}
+            submitLabel="Add DW word"
+            variant="capture"
+            resetOnSubmit
+            onSubmit={async (draft) => {
+              await addVocabEntry(draft, state.settings.focusNotebookId);
+              await refresh();
+              setSaved(`${draft.german} saved from ${selectedSource.title}.`);
+            }}
+          />
+          {saved && (
+            <div className="inline-success">
+              <CheckCircle2 size={18} />
+              {saved}
+            </div>
+          )}
+        </aside>
       </section>
 
       <details className="panel source-library-panel">
