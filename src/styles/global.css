@@ -970,6 +970,174 @@ button:disabled {
   font-size: 11px;
 }
 
+.capture-mode-tabs,
+.copywork-pick-toolbar {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 14px;
+  padding: 4px;
+  border: 1px solid #e6dccb;
+  border-radius: 8px;
+  background: #f7f1e7;
+}
+
+.capture-mode-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 34px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.capture-mode-tab.active {
+  background: #ffffff;
+  color: var(--ink);
+  box-shadow: 0 1px 4px rgba(83, 62, 32, 0.12);
+}
+
+.copywork-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.copywork-field,
+.copywork-review-row label {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.copywork-field textarea,
+.copywork-review-row input,
+.copywork-review-row select {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  padding: 7px 10px;
+}
+
+.copywork-field textarea {
+  min-height: 112px;
+  resize: vertical;
+}
+
+.copywork-pick-toolbar {
+  margin-bottom: 0;
+}
+
+.copywork-token-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  min-height: 44px;
+  padding: 10px;
+  border: 1px solid #eadfcc;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.copywork-token {
+  min-height: 32px;
+  border: 1px solid #d7ccb8;
+  border-radius: 999px;
+  background: #fffaf0;
+  color: var(--ink);
+  padding: 0 11px;
+  font-weight: 750;
+}
+
+.copywork-token.saved {
+  border-color: #6aa17d;
+  background: #eaf6ee;
+  color: #1f6b3c;
+}
+
+.copywork-token.phrase-start {
+  border-color: #246fb0;
+  background: #eaf3fc;
+  color: #174c7d;
+}
+
+.copywork-token:disabled {
+  cursor: progress;
+  opacity: 0.68;
+}
+
+.copywork-selected-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  min-height: 34px;
+}
+
+.copywork-selected-term {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  border: 1px solid #c9decf;
+  border-radius: 999px;
+  background: #eef8f1;
+  color: #1f6b3c;
+  padding: 0 10px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.copywork-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 0.72fr) minmax(0, 1fr);
+  gap: 8px;
+}
+
+.copywork-actions .primary-action,
+.copywork-actions .secondary-action,
+.copywork-save {
+  width: 100%;
+}
+
+.copywork-back {
+  justify-self: start;
+  min-height: 32px;
+  padding: 0;
+}
+
+.copywork-review-list {
+  display: grid;
+  gap: 10px;
+}
+
+.copywork-review-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  padding: 11px;
+  border: 1px solid #eadfcc;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.copywork-review-row strong {
+  grid-column: 1 / -1;
+  color: var(--ink);
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+.copywork-review-row label:first-of-type {
+  grid-column: 1 / -1;
+}
+
 .dw-viewer-panel {
   min-width: 0;
   padding: 14px;
