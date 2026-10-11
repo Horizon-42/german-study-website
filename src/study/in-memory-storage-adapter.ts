@@ -56,11 +56,17 @@ export function createInMemoryStudyStorageAdapter(initial: InMemoryStudyData = {
     });
   }
 
+  async function replaceAll(groups: StudyWriteGroup[]): Promise<void> {
+    Object.values(stores).forEach((store) => store.clear());
+    await writeMany(groups);
+  }
+
   return {
     getAll,
     getOne,
     writeMany,
     deleteMany,
+    replaceAll,
   };
 }
 

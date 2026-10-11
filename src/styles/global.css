@@ -219,6 +219,15 @@ button:disabled {
   border-color: #b9ad98;
 }
 
+label.secondary-action {
+  cursor: pointer;
+}
+
+.secondary-action.is-disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
 .icon-button.danger {
   color: var(--red);
 }

@@ -297,6 +297,35 @@ describe("local study commands", () => {
     expect(state.cards.map((item) => item.id)).toEqual(["keep-card"]);
     expect(state.reviewLogs.map((item) => item.id)).toEqual(["keep-log"]);
   });
+
+  it("restores a full backup, replacing current data and keeping review progress", async () => {
+    const commands = createCommands({
+      initial: {
+        entries: [entry({ id: "old-entry", german: "Baum", english: "tree" })],
+        cards: [card({ id: "old-card", vocabEntryId: "old-entry" })],
+        settings: [{ id: "settings", dailyNewLimit: 10, targetRetention: 0.9 }],
+      },
+    });
+    const backupCard = card({ reps: 7, lapses: 2, stability: 12.5, dueAt: "2026-06-30T08:00:00.000Z" });
+
+    const state = await commands.restoreStudyData({
+      schemaVersion: 2,
+      exportedAt: "2026-05-21T08:00:00.000Z",
+      entries: [entry()],
+      cards: [backupCard],
+      reviewLogs: [reviewLog()],
+      notebooks: [notebook()],
+      notebookEntries: [notebookEntry()],
+      settings: { id: "settings", dailyNewLimit: 25, targetRetention: 0.85, focusNotebookId: "notebook" },
+    });
+
+    expect(state.entries.map((value) => value.id)).toEqual(["entry"]);
+    expect(state.cards).toEqual([backupCard]);
+    expect(state.reviewLogs).toEqual([reviewLog()]);
+    expect(state.notebookEntries).toEqual([notebookEntry()]);
+    expect(state.settings).toEqual({ id: "settings", dailyNewLimit: 25, targetRetention: 0.85, focusNotebookId: "notebook" });
+    expect(state.notebooks.map((value) => value.id).sort()).toEqual([defaultNotebookId, "notebook"].sort());
+  });
 });
 
 function createCommands({

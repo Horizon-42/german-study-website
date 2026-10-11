@@ -313,6 +313,13 @@ export function createLocalStudyCommands(
     };
   }
 
+  /** Replaces all local study data, including review schedules and history, with a backup. */
+  async function restoreStudyData(payload: ExportPayload): Promise<StudyState> {
+    await persistence.replaceSnapshot(payload);
+    await ensureDefaultNotebook(now());
+    return getStudyState();
+  }
+
   async function removeDuplicateEntries(entries: VocabEntry[]): Promise<void> {
     const seen = new Map<string, VocabEntry>();
     const notebookEntries = await persistence.getNotebookEntries();
@@ -440,6 +447,7 @@ export function createLocalStudyCommands(
     setFocusNotebook,
     addEntryToNotebook,
     exportStudyData,
+    restoreStudyData,
   };
 }
 

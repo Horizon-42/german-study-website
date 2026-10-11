@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { CheckCircle2, Download } from "lucide-react";
-import { exportStudyData, saveSettings } from "../../data/db";
+import { CheckCircle2, Download, Upload } from "lucide-react";
+import { exportStudyData, restoreStudyData, saveSettings } from "../../data/db";
 import { serializeEntriesCsv } from "../../data/importers";
 import {
+  parseStudyBackup,
   readAutoBackupPreferences,
   runManualJsonBackup,
   writeAutoBackupPreferences,
@@ -33,6 +34,8 @@ export function SettingsPage({
   const [backupPreferences, setBackupPreferences] = useState<AutoBackupPreferences>(() => readAutoBackupPreferences());
   const [backupMessage, setBackupMessage] = useState("");
   const [requestingStorage, setRequestingStorage] = useState(false);
+  const [restoreMessage, setRestoreMessage] = useState<{ kind: "success" | "error"; text: string }>();
+  const [restoring, setRestoring] = useState(false);
 
   useEffect(() => {
     setSettings(state.settings);
@@ -56,6 +59,36 @@ export function SettingsPage({
     });
     onAutoBackupRecordChange(outcome.record);
     setBackupMessage(outcome.status === "downloaded" ? `Saved ${outcome.filename}.` : outcome.status === "failed" ? outcome.error : "Backup skipped.");
+  }
+
+  async function restoreFromBackup(file: File) {
+    setRestoreMessage(undefined);
+    const parsed = parseStudyBackup(await file.text());
+    if (!parsed.ok) {
+      setRestoreMessage({ kind: "error", text: parsed.error });
+      return;
+    }
+
+    const { payload } = parsed;
+    const exportedAt = payload.exportedAt ? new Date(payload.exportedAt).toLocaleString() : "an unknown date";
+    const confirmed = window.confirm(
+      `Replace ALL current words, notebooks, review progress and settings with the backup from ${exportedAt}? `
+        + `(${payload.entries.length} words, ${payload.reviewLogs.length} reviews.) This cannot be undone.`,
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setRestoring(true);
+    try {
+      await restoreStudyData(payload);
+      await refresh();
+      setRestoreMessage({ kind: "success", text: `Restored ${payload.entries.length} words and ${payload.reviewLogs.length} reviews.` });
+    } catch (error) {
+      setRestoreMessage({ kind: "error", text: error instanceof Error ? error.message : "Restore failed." });
+    } finally {
+      setRestoring(false);
+    }
   }
 
   async function requestPersistentStorageAgain() {
@@ -161,6 +194,34 @@ export function SettingsPage({
           </button>
         </div>
         {backupMessage && <p className={backupMessage.startsWith("Saved") ? "success-text" : "error-text"}>{backupMessage}</p>}
+      </section>
+
+      <section className="panel settings-grid">
+        <div className="status-tile">
+          <span>Restore from backup</span>
+          <strong>Everything</strong>
+          <small>Words, notebooks, review progress and settings. Replaces current data.</small>
+        </div>
+        <div className="settings-actions">
+          <label className={`secondary-action${restoring ? " is-disabled" : ""}`}>
+            <Upload size={18} />
+            {restoring ? "Restoring..." : "Choose backup JSON"}
+            <input
+              type="file"
+              accept="application/json,.json"
+              hidden
+              disabled={restoring}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = "";
+                if (file) {
+                  void restoreFromBackup(file);
+                }
+              }}
+            />
+          </label>
+        </div>
+        {restoreMessage && <p className={`${restoreMessage.kind}-text`}>{restoreMessage.text}</p>}
       </section>
     </section>
   );

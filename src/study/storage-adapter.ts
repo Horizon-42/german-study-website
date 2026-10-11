@@ -31,4 +31,15 @@ export type StudyStorageAdapter = {
   ): Promise<StudyStoreValueMap[Store] | undefined>;
   writeMany(groups: StudyWriteGroup[]): Promise<void>;
   deleteMany(groups: StudyDeleteGroup[]): Promise<void>;
+  /** Clears every store, then writes the given values, as one atomic operation. */
+  replaceAll(groups: StudyWriteGroup[]): Promise<void>;
 };
+
+export const studyStoreNames: StudyStoreName[] = [
+  "entries",
+  "cards",
+  "reviewLogs",
+  "notebooks",
+  "notebookEntries",
+  "settings",
+];

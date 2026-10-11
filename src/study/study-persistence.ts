@@ -131,6 +131,17 @@ export function createStudyPersistence(storage: StudyStorageAdapter) {
     ]);
   }
 
+  async function replaceSnapshot(state: StudyState): Promise<void> {
+    await storage.replaceAll([
+      { store: "entries", values: state.entries },
+      { store: "cards", values: state.cards },
+      { store: "reviewLogs", values: state.reviewLogs },
+      { store: "notebooks", values: state.notebooks },
+      { store: "notebookEntries", values: state.notebookEntries },
+      { store: "settings", values: [state.settings] },
+    ]);
+  }
+
   return {
     getSnapshot,
     getEntries,
@@ -150,5 +161,6 @@ export function createStudyPersistence(storage: StudyStorageAdapter) {
     deleteCardsCascade,
     deleteNotebookCascade,
     recordReview,
+    replaceSnapshot,
   };
 }

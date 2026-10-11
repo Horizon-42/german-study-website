@@ -1,3 +1,4 @@
+import { studyStoreNames } from "../study/storage-adapter";
 import type {
   StudyDeleteGroup,
   StudyStorageAdapter,
@@ -118,11 +119,25 @@ export function createIndexedDbStudyStorageAdapter(): StudyStorageAdapter {
     await txDone(tx);
   }
 
+  async function replaceAll(groups: StudyWriteGroup[]): Promise<void> {
+    const db = await openDb();
+    const tx = db.transaction(studyStoreNames, "readwrite");
+
+    studyStoreNames.forEach((storeName) => tx.objectStore(storeName).clear());
+    groups.forEach((group) => {
+      const store = tx.objectStore(group.store);
+      group.values.forEach((value) => store.put(value));
+    });
+
+    await txDone(tx);
+  }
+
   return {
     getAll,
     getOne,
     writeMany,
     deleteMany,
+    replaceAll,
   };
 }
 

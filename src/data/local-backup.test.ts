@@ -3,6 +3,7 @@ import {
   backupFilename,
   backupSnapshotHash,
   maybeRunAutomaticJsonBackup,
+  parseStudyBackup,
   readAutoBackupPreferences,
   runManualJsonBackup,
   writeAutoBackupPreferences,
@@ -92,6 +93,39 @@ describe("local backup", () => {
       type: "application/json",
     });
     expect(JSON.parse(downloads[0].content)).toMatchObject({ schemaVersion: 2 });
+  });
+
+  it("parses a full JSON backup for restore", () => {
+    const payload = exportPayload();
+
+    expect(parseStudyBackup(JSON.stringify(payload))).toEqual({ ok: true, payload });
+  });
+
+  it("rejects files that are not complete backups", () => {
+    const { cards: _cards, ...withoutCards } = exportPayload();
+    const danglingCard = exportPayload({
+      cards: [
+        {
+          id: "card",
+          vocabEntryId: "missing",
+          direction: "de_to_en",
+          state: "new",
+          dueAt: "2026-05-27T09:00:00.000Z",
+          stability: 0,
+          difficulty: 0,
+          elapsedDays: 0,
+          scheduledDays: 0,
+          reps: 0,
+          lapses: 0,
+        },
+      ],
+    });
+
+    expect(parseStudyBackup("not json")).toMatchObject({ ok: false });
+    expect(parseStudyBackup(JSON.stringify([{ german: "Haus" }]))).toMatchObject({ ok: false });
+    expect(parseStudyBackup(JSON.stringify({ ...exportPayload(), schemaVersion: 1 }))).toMatchObject({ ok: false });
+    expect(parseStudyBackup(JSON.stringify(withoutCards))).toEqual({ ok: false, error: 'The backup is missing "cards".' });
+    expect(parseStudyBackup(JSON.stringify(danglingCard))).toMatchObject({ ok: false });
   });
 });
 

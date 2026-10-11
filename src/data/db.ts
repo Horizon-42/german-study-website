@@ -23,4 +23,5 @@ export const {
   setFocusNotebook,
   addEntryToNotebook,
   exportStudyData,
+  restoreStudyData,
 } = localStudy;

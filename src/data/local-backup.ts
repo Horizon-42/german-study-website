@@ -38,6 +38,10 @@ export type BackupOutcome =
   | { status: "unchanged"; record: AutoBackupRecord }
   | { status: "failed"; record: AutoBackupRecord; error: string };
 
+export type ParsedStudyBackup =
+  | { ok: true; payload: ExportPayload }
+  | { ok: false; error: string };
+
 type KeyValueStorage = Pick<Storage, "getItem" | "setItem">;
 
 const preferencesKey = "german-study:auto-backup-preferences";
@@ -166,6 +170,58 @@ export function backupSnapshotHash(payload: ExportPayload): string {
   };
 
   return hashString(stableStringify(snapshot));
+}
+
+const backupCollections = ["entries", "cards", "reviewLogs", "notebooks", "notebookEntries"] as const;
+
+/** Validates a full JSON backup (as written by exportStudyData) before it replaces local data. */
+export function parseStudyBackup(text: string): ParsedStudyBackup {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return { ok: false, error: "The file is not valid JSON." };
+  }
+
+  if (!isRecord(parsed)) {
+    return { ok: false, error: "The file is not a study backup." };
+  }
+
+  if (parsed.schemaVersion !== 2) {
+    return { ok: false, error: "This backup was made by an unsupported version of the app." };
+  }
+
+  for (const collection of backupCollections) {
+    const values = parsed[collection];
+    if (!Array.isArray(values)) {
+      return { ok: false, error: `The backup is missing "${collection}".` };
+    }
+    if (!values.every((value) => isRecord(value) && typeof value.id === "string" && value.id !== "")) {
+      return { ok: false, error: `The backup has an invalid record in "${collection}".` };
+    }
+  }
+
+  const settings = parsed.settings;
+  if (
+    !isRecord(settings)
+    || settings.id !== "settings"
+    || typeof settings.dailyNewLimit !== "number"
+    || typeof settings.targetRetention !== "number"
+  ) {
+    return { ok: false, error: "The backup has invalid settings." };
+  }
+
+  const payload = parsed as ExportPayload;
+  const entryIds = new Set(payload.entries.map((entry) => entry.id));
+  if (payload.cards.some((card) => !entryIds.has(card.vocabEntryId))) {
+    return { ok: false, error: "The backup has cards for words that are not in it." };
+  }
+
+  return { ok: true, payload };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 export function backupFilename(exportedAt: string): string {
